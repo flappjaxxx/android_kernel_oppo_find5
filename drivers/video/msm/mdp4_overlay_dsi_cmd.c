@@ -415,12 +415,8 @@ int mdp4_dsi_cmd_pipe_commit(int cndx, int wait)
 
 	mdp4_stat.overlay_commit[pipe->mixer_num]++;
 
-	if (wait) {
-		if (pipe->ov_blt_addr)
-			mdp4_dsi_cmd_wait4ov(0);
-		else
-			mdp4_dsi_cmd_wait4dmap(0);
-	}
+	if (wait)
+		mdp4_dsi_cmd_wait4vsync(0);
 
 	return cnt;
 }
