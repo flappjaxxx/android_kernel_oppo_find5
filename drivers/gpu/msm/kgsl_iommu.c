@@ -1069,6 +1069,112 @@ err:
 	return status;
 }
 
+/*
+ * kgsl_iommu_lock_rb_in_tlb - Allocates tlb entries and locks the
+ * virtual to physical address translation of ringbuffer for 3D
+ * device into tlb.
+ * @mmu - Pointer to mmu structure
+ *
+ * Return - void
+ */
+static void kgsl_iommu_lock_rb_in_tlb(struct kgsl_mmu *mmu)
+{
+	struct kgsl_device *device = mmu->device;
+	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
+	struct adreno_ringbuffer *rb;
+	struct kgsl_iommu *iommu = mmu->priv;
+	unsigned int num_tlb_entries;
+	unsigned int tlblkcr = 0;
+	unsigned int v2pxx = 0;
+	unsigned int vaddr = 0;
+	int i, j, k, l;
+
+	if (!iommu->sync_lock_initialized)
+		return;
+
+	rb = &adreno_dev->ringbuffer;
+	num_tlb_entries = rb->buffer_desc.size / PAGE_SIZE;
+
+	for (i = 0; i < iommu->unit_count; i++) {
+		struct kgsl_iommu_unit *iommu_unit = &iommu->iommu_units[i];
+		for (j = 0; j < iommu_unit->dev_count; j++) {
+			tlblkcr = 0;
+			if (cpu_is_msm8960())
+				tlblkcr |= ((num_tlb_entries &
+					KGSL_IOMMU_TLBLKCR_FLOOR_MASK) <<
+					KGSL_IOMMU_TLBLKCR_FLOOR_SHIFT);
+			else
+				tlblkcr |= (((num_tlb_entries *
+					iommu_unit->dev_count) &
+					KGSL_IOMMU_TLBLKCR_FLOOR_MASK) <<
+					KGSL_IOMMU_TLBLKCR_FLOOR_SHIFT);
+			/* Do not invalidate locked entries on tlbiall flush */
+			tlblkcr	|= ((1 & KGSL_IOMMU_TLBLKCR_TLBIALLCFG_MASK)
+				<< KGSL_IOMMU_TLBLKCR_TLBIALLCFG_SHIFT);
+			tlblkcr	|= ((1 & KGSL_IOMMU_TLBLKCR_TLBIASIDCFG_MASK)
+				<< KGSL_IOMMU_TLBLKCR_TLBIASIDCFG_SHIFT);
+			tlblkcr	|= ((1 & KGSL_IOMMU_TLBLKCR_TLBIVAACFG_MASK)
+				<< KGSL_IOMMU_TLBLKCR_TLBIVAACFG_SHIFT);
+			/* Enable tlb locking */
+			tlblkcr |= ((1 & KGSL_IOMMU_TLBLKCR_LKE_MASK)
+				<< KGSL_IOMMU_TLBLKCR_LKE_SHIFT);
+			KGSL_IOMMU_SET_CTX_REG(iommu, iommu_unit,
+					iommu_unit->dev[j].ctx_id,
+					TLBLKCR, tlblkcr);
+		}
+		for (j = 0; j < iommu_unit->dev_count; j++) {
+			/* skip locking entries for private bank on 8960 */
+			if (cpu_is_msm8960() &&  KGSL_IOMMU_CONTEXT_PRIV == j)
+				continue;
+			/* Lock the ringbuffer virtual address into tlb */
+			vaddr = rb->buffer_desc.gpuaddr;
+			for (k = 0; k < num_tlb_entries; k++) {
+				v2pxx = 0;
+				v2pxx |= (((k + j * num_tlb_entries) &
+					KGSL_IOMMU_V2PXX_INDEX_MASK)
+					<< KGSL_IOMMU_V2PXX_INDEX_SHIFT);
+				v2pxx |= vaddr & (KGSL_IOMMU_V2PXX_VA_MASK <<
+						KGSL_IOMMU_V2PXX_VA_SHIFT);
+
+				KGSL_IOMMU_SET_CTX_REG(iommu, iommu_unit,
+						iommu_unit->dev[j].ctx_id,
+						V2PUR, v2pxx);
+				mb();
+				vaddr += PAGE_SIZE;
+				for (l = 0; l < iommu_unit->dev_count; l++) {
+					tlblkcr = KGSL_IOMMU_GET_CTX_REG(iommu,
+						iommu_unit,
+						iommu_unit->dev[l].ctx_id,
+						TLBLKCR);
+					mb();
+					tlblkcr &=
+					~(KGSL_IOMMU_TLBLKCR_VICTIM_MASK
+					<< KGSL_IOMMU_TLBLKCR_VICTIM_SHIFT);
+					tlblkcr |= (((k + 1 +
+					(j * num_tlb_entries)) &
+					KGSL_IOMMU_TLBLKCR_VICTIM_MASK) <<
+					KGSL_IOMMU_TLBLKCR_VICTIM_SHIFT);
+					KGSL_IOMMU_SET_CTX_REG(iommu,
+						iommu_unit,
+						iommu_unit->dev[l].ctx_id,
+						TLBLKCR, tlblkcr);
+				}
+			}
+		}
+		for (j = 0; j < iommu_unit->dev_count; j++) {
+			tlblkcr = KGSL_IOMMU_GET_CTX_REG(iommu, iommu_unit,
+						iommu_unit->dev[j].ctx_id,
+						TLBLKCR);
+			mb();
+			/* Disable tlb locking */
+			tlblkcr &= ~(KGSL_IOMMU_TLBLKCR_LKE_MASK
+				<< KGSL_IOMMU_TLBLKCR_LKE_SHIFT);
+			KGSL_IOMMU_SET_CTX_REG(iommu, iommu_unit,
+				iommu_unit->dev[j].ctx_id, TLBLKCR, tlblkcr);
+		}
+	}
+}
+
 static int kgsl_iommu_start(struct kgsl_mmu *mmu)
 {
 	struct kgsl_device *device = mmu->device;
