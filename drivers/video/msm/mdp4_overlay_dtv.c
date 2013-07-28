@@ -343,7 +343,6 @@ void mdp4_dtv_vsync_ctrl(struct fb_info *info, int enable)
 	vctrl->vsync_irq_enabled = enable;
 
 	mdp4_dtv_vsync_irq_ctrl(cndx, enable);
-
 }
 
 void mdp4_dtv_wait4vsync(int cndx)
