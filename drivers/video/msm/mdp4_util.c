@@ -534,6 +534,7 @@ irqreturn_t mdp4_isr(int irq, void *ptr)
 #endif
 /* OPPO 2012-12-06 zhengzk Modify end */
 		mdp4_stat.intr_underrun_p++;
+		dump_underrun_pipe_info();
 		/* When underun occurs mdp clear the histogram registers
 		that are set before in hw_init so restore them back so
 		that histogram works.*/
