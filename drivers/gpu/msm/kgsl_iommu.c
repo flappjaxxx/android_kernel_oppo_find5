@@ -292,10 +292,6 @@ static int kgsl_iommu_fault_handler(struct iommu_domain *domain,
 	struct kgsl_device *device;
 	struct adreno_device *adreno_dev;
 	unsigned int no_page_fault_log = 0;
-	unsigned int curr_context_id = 0;
-	unsigned int curr_global_ts = 0;
-	static struct adreno_context *curr_context;
-	static struct kgsl_context *context;
 	unsigned int pid;
 	unsigned int fsynr0, fsynr1;
 	int write;

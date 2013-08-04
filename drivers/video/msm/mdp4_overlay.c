@@ -44,6 +44,9 @@
 
 #define VERSION_KEY_MASK	0xFFFFFF00
 
+int get_fb_phys_info(unsigned long *start, unsigned long *len, int fb_num,
+        int subsys_id);
+
 struct mdp4_overlay_ctrl {
 	struct mdp4_overlay_pipe plist[OVERLAY_PIPE_MAX];
 	struct mdp4_overlay_pipe *stage[MDP4_MIXER_MAX][MDP4_MIXER_STAGE_MAX];

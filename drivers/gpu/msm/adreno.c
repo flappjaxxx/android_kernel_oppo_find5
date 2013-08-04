@@ -595,6 +595,9 @@ static int adreno_setup_pt(struct kgsl_device *device,
 	}
 	return result;
 
+unmap_setstate_desc:
+	kgsl_mmu_unmap(pagetable, &device->mmu.setstate_memory);
+
 unmap_memstore_desc:
 	kgsl_mmu_unmap(pagetable, &device->memstore);
 

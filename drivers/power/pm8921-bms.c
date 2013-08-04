@@ -3218,8 +3218,8 @@ static int __devinit pm8921_bms_hw_init(struct pm8921_bms_chip *chip)
 static void check_initial_ocv(struct pm8921_bms_chip *chip)
 {
 	int ocv_uv, rc;
-	int rc1,adc_ocv_uv;
-	int16_t ocv_raw;
+	int rc1,adc_ocv_uv = 0;
+	int16_t ocv_raw = 0;
 	int usb_chg;
 	int shutdown_ocv=0;
 

@@ -17,6 +17,7 @@
 #include "mdp-subdev.h"
 #include "wfd-util.h"
 #include <linux/switch.h>
+#include "../../../video/msm/msm_fb.h"
 
 struct mdp_instance {
 	struct fb_info *mdp;

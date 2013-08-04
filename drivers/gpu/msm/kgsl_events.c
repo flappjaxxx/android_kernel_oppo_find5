@@ -307,10 +307,10 @@ void kgsl_cancel_events_ctxt(struct kgsl_device *device,
 		 */
 		list_del(&event->list);
 
-		trace_kgsl_fire_event(id, cur, jiffies - event->created);
+		trace_kgsl_fire_event(id, cur, 0, jiffies - event->created);
 
 		if (event->func)
-			event->func(device, event->priv, id, cur);
+			event->func(device, event->priv, id, cur, 0);
 
 		kgsl_context_put(context);
 		kfree(event);
@@ -318,8 +318,7 @@ void kgsl_cancel_events_ctxt(struct kgsl_device *device,
 		kgsl_active_count_put(device);
 	}
 
-	/* Remove ourselves from the master pending list */
-	list_del_init(&context->events_list);
+	kgsl_context_put(context);
 }
 
 /**

@@ -254,6 +254,9 @@ static struct res_mmu_clk rot_mmu_clks[] = {
 	{"smmu_iface_clk"}
 };
 
+int get_fb_phys_info(unsigned long *start, unsigned long *len, int fb_num,
+        int subsys_id);
+
 u32 rotator_allocate_2pass_buf(struct rot_buf_type *rot_buf, int s_ndx)
 {
 	ion_phys_addr_t	addr, read_addr = 0;
